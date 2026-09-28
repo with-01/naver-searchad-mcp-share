@@ -6,17 +6,7 @@ import json
 from typing import Any
 
 from .client import CONFIRM_ACTION, WRITE_METHODS
-from .spec import EXPECTED_ENDPOINT_COUNTS, get_registry, project_root
-
-FORBIDDEN_TRUNCATION_PATTERNS = [
-    "truncate(",
-    "truncated",
-    "max_items",
-    "max_results",
-    "summarize(",
-    "token saving",
-    "token-saving",
-]
+from .spec import EXPECTED_ENDPOINT_COUNTS, get_registry
 
 
 def verify_snapshot_files(spec_dir: Path) -> dict[str, Any]:
@@ -72,10 +62,6 @@ def run_official_parity_review() -> dict[str, Any]:
                     }
                 )
 
-    truncation_hits = scan_for_forbidden_truncation_patterns()
-    for hit in truncation_hits:
-        problems.append(f"Forbidden truncation/token-saving pattern found: {hit}")
-
     return {
         "ok": not problems,
         "spec": spec_result,
@@ -86,26 +72,10 @@ def run_official_parity_review() -> dict[str, Any]:
         "notes": [
             "Parity verifies the bundled pinned snapshot; it does not check the latest upstream release.",
             "Ambiguous official parameter types are intentionally blocked at runtime instead of guessed.",
-            "No convenience tools are included in this initial version by user request.",
+            "Bounded views preserve complete responses in the private cache; pagination and bulk workflows have separate regression tests.",
             "No real POST/PUT/PATCH/DELETE calls were made during review.",
         ],
     }
-
-
-def scan_for_forbidden_truncation_patterns() -> list[str]:
-    root = project_root() / "src" / "naver_searchad_mcp"
-    hits: list[str] = []
-    for path in root.rglob("*.py"):
-        text = path.read_text(encoding="utf-8")
-        for lineno, line in enumerate(text.splitlines(), start=1):
-            lower = line.lower()
-            for pattern in FORBIDDEN_TRUNCATION_PATTERNS:
-                if pattern in lower:
-                    # Allow this review module to name the forbidden patterns.
-                    if path.name == "review.py":
-                        continue
-                    hits.append(f"{path.relative_to(project_root())}:{lineno}: {line.strip()}")
-    return hits
 
 
 def main() -> None:

@@ -8,9 +8,9 @@ description: 캠페인 조회, 일괄 변경, 보고서, 오류 처리의 기본
 ## 캠페인·광고그룹·키워드 조회
 
 1. `list_operations(tag="Campaign")` 또는 `search_operations("keyword")`로 후보를 찾습니다.
-2. `get_operation_schema`에서 전체 목록과 특정 ID 조회를 구분합니다. `ids`가 필수인 operation을 전체 조회용으로 쓰지 마세요.
+2. `get_operation_schema`의 기본 `view="input"`에서 전체 목록과 특정 ID 조회를 구분합니다. `ids`가 필수인 operation을 전체 조회용으로 쓰지 마세요. 목록·검색의 `next_offset`이 있으면 다음 페이지를 확인합니다.
 3. 서버가 반환한 정확한 키와 필요한 query/path 값으로 `execute_read_operation`을 호출합니다.
-4. 저장된 큰 응답은 `read_saved_response`로 나눠 읽습니다. 일부만 읽었다면 보고서에도 범위를 명시합니다.
+4. 저장된 큰 응답은 `read_saved_response`로 필요한 필드만 기본 20개씩 나눠 읽습니다. 일부만 읽었다면 보고서에도 범위를 명시합니다.
 
 ## 등록·수정·삭제
 
@@ -22,6 +22,10 @@ description: 캠페인 조회, 일괄 변경, 보고서, 오류 처리의 기본
 6. 가능한 경우 GET으로 실제 반영 상태를 확인합니다.
 
 계정 잔액 조회가 필요한 예산·집행 검토에는 `list_operations(tag="Bizmoney")`로 적절한 GET을 선택합니다. 모든 변경에 잔액 조회가 필요한 것은 아닙니다.
+
+## 대량 키워드 등록·입찰가 수정
+
+운영자가 `NAVER_SEARCHAD_INPUT_DIR` 안에 JSON 파일을 준비합니다. `prepare_keyword_batch`로 전체 입력을 HTTP 없이 검증하고, 계획 요약을 검토한 뒤 `execute_keyword_batch`로 다음 범위만 실행합니다. 응답을 잃으면 재실행 전에 `get_keyword_batch_status`를 조회합니다. 스키마와 전체 항목을 대화로 반복 전송하지 않습니다. 정확한 파일·도구 입력 예시는 [bulk-keywords](bulk-keywords.md)를 확인하세요.
 
 ## 성과 보고서
 

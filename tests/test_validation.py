@@ -40,6 +40,59 @@ def test_new_managed_keyword_post_body():
     assert prepared.body == body
 
 
+@pytest.mark.parametrize("operation_id", ["modifyUsingPUT_8", "modifyUsingPUT_9"])
+@pytest.mark.parametrize("field", ["userLock", "bidAmt", "links", "inspect"])
+def test_keyword_updates_use_documented_unquoted_fields(operation_id, field):
+    operation = op(f"ncc-heroes-ncc:{operation_id}")
+    record = {"nccKeywordId": "kwd-example", "nccAdgroupId": "grp-example", "bidAmt": 1000, "useGroupBidAmt": False}
+    single = operation_id == "modifyUsingPUT_8"
+    prepared = validate_operation_input(
+        operation,
+        path_params={"nccKeywordId": "kwd-example"} if single else None,
+        query={"fields": field},
+        body=record if single else [record],
+    )
+    assert prepared.query["fields"] == field
+    with pytest.raises(ValidationError, match="official enum values"):
+        validate_operation_input(
+            operation,
+            path_params={"nccKeywordId": "kwd-example"} if single else None,
+            query={"fields": f"'{field}'"},
+            body=record if single else [record],
+        )
+
+
+@pytest.mark.parametrize("operation_id,limit,query,record", [
+    ("addUsingPOST_4", 100, {"nccAdgroupId": "grp-example"}, {"keyword": "example"}),
+    ("modifyUsingPUT_9", 200, {"fields": "bidAmt"}, {"nccKeywordId": "kwd-example", "nccAdgroupId": "grp-example", "bidAmt": 1000, "useGroupBidAmt": False}),
+])
+def test_keyword_batch_limit_is_enforced_before_network(operation_id, limit, query, record):
+    import httpx
+    from naver_searchad_mcp.auth import NaverSearchAdCredentials
+    from naver_searchad_mcp.client import CONFIRM_ACTION, NaverSearchAdClient
+
+    operation = op(f"ncc-heroes-ncc:{operation_id}")
+    assert len(validate_operation_input(operation, query=query, body=[record] * limit).body) == limit
+
+    def no_network(request):
+        pytest.fail("Oversized keyword batches must fail before any HTTP request")
+
+    credentials = NaverSearchAdCredentials(customer_id="123", access_license="example", secret_key="example")
+    with httpx.Client(transport=httpx.MockTransport(no_network)) as http_client:
+        client = NaverSearchAdClient(credentials, http_client=http_client)
+        with pytest.raises(ValidationError, match=f"maxItems {limit}"):
+            client.execute_operation(operation, query=query, body=[record] * (limit + 1), confirm_action=CONFIRM_ACTION)
+
+
+def test_keyword_normalization_keeps_official_raw_spec_unchanged():
+    operation = op("ncc-heroes-ncc:modifyUsingPUT_9")
+    assert operation.request_body["maxItems"] == 200
+    raw_fields = next(p for p in operation.raw["parameters"] if p.get("name") == "fields")
+    raw_body = next(p for p in operation.raw["parameters"] if p.get("in") == "body")
+    assert "'bidAmt'" in raw_fields["enum"]
+    assert "maxItems" not in raw_body["schema"]
+
+
 def vsv(value, schema, field_path="x"):
     """_validate_schema_value 짧은 호출 헬퍼."""
     return _validate_schema_value(value, schema, field_path)

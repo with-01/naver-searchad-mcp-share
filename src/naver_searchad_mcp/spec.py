@@ -32,6 +32,12 @@ EXPECTED_ENDPOINT_COUNTS = {
     "ncc-report": 8,
 }
 
+# The official operation descriptions define these per-request array limits.
+KEYWORD_BATCH_LIMITS = {
+    "ncc-heroes-ncc:addUsingPOST_4": 100,
+    "ncc-heroes-ncc:modifyUsingPUT_9": 200,
+}
+
 # Preserve the public keys from the initial snapshot: upstream-generated
 # operationIds can change or be reused for a different method/path.
 LEGACY_OPERATION_KEYS = {
@@ -183,7 +189,7 @@ class SpecRegistry:
                         description=op_spec.get("description"),
                         tags=tags,
                         parameters=params,
-                        request_body=_extract_request_body(op_spec),
+                        request_body=_extract_request_body({**op_spec, "parameters": params}),
                         responses=op_spec.get("responses") or {},
                         raw=op_spec,
                     )
@@ -285,9 +291,15 @@ class SpecRegistry:
         except KeyError as exc:
             raise OperationNotFound(f"Unknown official operation_key: {operation_key}") from exc
 
-    def get_operation_schema(self, operation_key: str, include_raw: bool = True) -> dict[str, Any]:
+    def get_operation_schema(
+        self, operation_key: str, include_raw: bool = True, *, view: str = "full"
+    ) -> dict[str, Any]:
+        if view not in {"input", "full"}:
+            raise ValueError("view must be 'input' or 'full'")
         operation = self.get_operation(operation_key)
-        result = operation.to_dict(include_raw=include_raw)
+        result = operation.to_dict(include_raw=include_raw and view == "full")
+        if view == "input":
+            result.pop("responses")
         definitions = self.documents[operation.section].get("definitions") or {}
         included: dict[str, Any] = {}
 
@@ -358,6 +370,18 @@ def _normalize_parameters(parameters: list[Any], operation_key: str) -> list[dic
             # The official description requires a JSON array string. Its enum
             # describes individual metrics, not the entire serialized string.
             copied["x-json-array-item-enum"] = copied.pop("enum")
+        if operation_key in {
+            "ncc-heroes-ncc:modifyUsingPUT_8",
+            "ncc-heroes-ncc:modifyUsingPUT_9",
+        } and copied.get("in") == "query" and copied.get("name") == "fields":
+            # The descriptions and official Python sample use unquoted field
+            # names. These four enum entries incorrectly include quote marks.
+            field_names = {f"'{name}'": name for name in ("userLock", "bidAmt", "links", "inspect")}
+            copied["enum"] = [field_names.get(value, value) for value in copied.get("enum", [])]
+            copied["_manual_override_reason"] = "Official keyword update descriptions and Python example use unquoted fields names."
+        if operation_key in KEYWORD_BATCH_LIMITS and copied.get("in") == "body":
+            copied["schema"] = {**copied["schema"], "maxItems": KEYWORD_BATCH_LIMITS[operation_key]}
+            copied["_manual_override_reason"] = "Maximum array length is stated in the official operation description."
         normalized.append(copied)
     return normalized
 

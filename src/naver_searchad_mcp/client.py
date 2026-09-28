@@ -22,6 +22,10 @@ CONFIRM_ACTION = "NAVER_SEARCHAD_WRITE"
 # 응답 byte size 가 이 값을 초과하면 자동으로 임시 파일에 저장 후 메타만 반환.
 # save_response_to_file 은 서버 응답 캐시 안의 JSON 파일명만 허용.
 AUTO_SAVE_THRESHOLD_BYTES = 50_000
+FAILURE_PREVIEW_LIMIT = 5
+READ_PAGE_SIZE = 20
+READ_PAGE_LIMIT = 100
+READ_BYTE_LIMIT = 20_000
 
 # Each server process owns its cache. MCP callers cannot read unrelated files.
 _RESPONSE_CACHE = tempfile.TemporaryDirectory(prefix="naver-searchad-")
@@ -106,6 +110,7 @@ class NaverSearchAdClient:
         body: Any = None,
         confirm_action: str | None = None,
         save_response_to_file: str | None = None,
+        response_mode: str = "auto",
     ) -> ApiResponse:
         """공식 op 호출.
 
@@ -113,9 +118,11 @@ class NaverSearchAdClient:
           - None (기본): 응답이 작으면 그대로 본문 노출. 50KB 초과면 자동으로
             임시 파일에 저장하고 본문 자리는 None, meta.saved_to 에 경로.
           - JSON 파일명: 서버 캐시에 저장. body=None, meta.saved_to=서버 경로.
-        실패 항목(상태가 ERROR/REJECTED/...) 이 있으면 body 노출 여부와 무관하게
-        failures 배열에 풀 본문이 함께 노출되어 클라이언트가 확인 가능.
+        response_mode='summary'는 작은 응답도 보관하고 요약만 반환.
+        저장된 응답의 실패 항목은 일부만 미리 보기로 반환하며 전체 원문은 보관.
         """
+        if response_mode not in {"auto", "summary"}:
+            raise ValueError("response_mode must be auto or summary")
         if operation.method in WRITE_METHODS and confirm_action != CONFIRM_ACTION:
             raise WriteConfirmationRequired(
                 f"{operation.method} {operation.operation_key} requires confirm_action={CONFIRM_ACTION!r}"
@@ -158,6 +165,7 @@ class NaverSearchAdClient:
             response_headers=dict(response.headers),
             raw_body=raw_body,
             save_response_to_file=save_response_to_file,
+            response_mode=response_mode,
         )
 
 
@@ -217,12 +225,17 @@ def _analyze_response_body(body: Any) -> tuple[dict[str, Any], list[dict[str, An
 
     if isinstance(body, list):
         meta["item_count"] = len(body)
+        meta["keyword_id_count"] = sum(
+            isinstance(item, dict) and isinstance(item.get("nccKeywordId"), str)
+            and bool(item["nccKeywordId"]) for item in body
+        )
         ok = 0
         fail = 0
         for idx, item in enumerate(body):
             if _is_failure_item(item):
                 fail += 1
-                failures.append({"index": idx, "item": item})
+                if len(failures) < FAILURE_PREVIEW_LIMIT:
+                    failures.append({"index": idx, "item": item})
             else:
                 ok += 1
         meta["ok_count"] = ok
@@ -284,6 +297,7 @@ def _build_api_response(
     response_headers: dict[str, str],
     raw_body: Any,
     save_response_to_file: str | None,
+    response_mode: str = "auto",
 ) -> ApiResponse:
     """raw_body 를 분석해 임계값/사용자 명시 따라 메타 모드 또는 본문 모드로 ApiResponse 생성."""
     meta, failures = _analyze_response_body(raw_body)
@@ -293,8 +307,7 @@ def _build_api_response(
     auto_save = (
         save_response_to_file is None
         and isinstance(byte_size, int)
-        and byte_size > AUTO_SAVE_THRESHOLD_BYTES
-        and status_code < 400
+        and (byte_size > AUTO_SAVE_THRESHOLD_BYTES or response_mode == "summary")
     )
     need_save = explicit_path or auto_save
 
@@ -311,11 +324,24 @@ def _build_api_response(
             meta["saved_to"] = path
             meta["auto_saved"] = not explicit_path
             body_returned = None
+            # Original failure items remain in the saved body. A large error
+            # message must not defeat the cache by expanding its preview.
+            failures = [
+                {"index": entry["index"], "item": {
+                    key: value for key, value in entry["item"].items()
+                    if key in {"nccKeywordId", "keyword", "status", "inspectStatus", "code", "message"}
+                    and len(json.dumps(value, ensure_ascii=False).encode("utf-8")) <= 500
+                }} for entry in failures
+            ]
     else:
         body_returned = raw_body
         # 작은 성공 응답 + 실패 0건이면 meta 노출 생략 (기존 응답 형식 유지)
         if not failures:
             meta = None
+
+    if meta is not None and meta.get("fail_count"):
+        meta["failure_preview_count"] = len(failures)
+        meta["more_failures"] = meta["fail_count"] > len(failures)
 
     return ApiResponse(
         status_code=status_code,
@@ -333,12 +359,12 @@ def read_saved_response(
     slice_end: int | None = None,
     fields: list[str] | None = None,
     only_failures: bool = False,
+    collection_key: str | None = None,
 ) -> dict[str, Any]:
     """저장된 응답 파일에서 일부만 꺼내 반환 (큰 응답 후속 조회).
 
-    list 응답: slice_start/slice_end 로 범위 지정, fields 로 객체에서 일부 필드만,
-    only_failures=True 면 실패 항목만 필터.
-    dict / str 응답: slice 는 무시되고 fields 만 적용.
+    목록은 실패 필터 후 페이지를 적용. 기본 20개, 최대 100개/20KB.
+    큰 객체 안의 목록은 collection_key로 선택. 문자열은 문자 범위로 조회.
     """
     candidate = Path(path)
     if (
@@ -351,28 +377,59 @@ def read_saved_response(
     with candidate.open(encoding="utf-8") as f:
         body = json.load(f)
 
+    if slice_start < 0 or (slice_end is not None and slice_end <= slice_start):
+        raise ValueError("Use a nonnegative slice_start and slice_end greater than slice_start")
+    if collection_key is not None:
+        if not isinstance(body, dict) or collection_key not in body:
+            raise ValueError("collection_key must name a field of the saved object")
+        body = body[collection_key]
+
     if isinstance(body, list):
         total = len(body)
-        items = body[slice_start:slice_end]
-        if only_failures:
-            items = [it for it in items if _is_failure_item(it)]
+        matches = [it for it in body if _is_failure_item(it)] if only_failures else body
+        requested_end = slice_end if slice_end is not None else slice_start + READ_PAGE_SIZE
+        end = min(requested_end, slice_start + READ_PAGE_LIMIT)
+        items = matches[slice_start:end]
         if fields:
             items = [
                 {k: v for k, v in it.items() if k in fields} if isinstance(it, dict) else it
                 for it in items
             ]
-        return {
+        page = []
+        byte_size = 2
+        for item in items:
+            size = len(json.dumps(item, ensure_ascii=False).encode("utf-8")) + (2 if page else 0)
+            if byte_size + size > READ_BYTE_LIMIT:
+                break
+            page.append(item)
+            byte_size += size
+        next_offset = slice_start + len(page)
+        result = {
             "path": abs_path,
             "total_items": total,
-            "returned_items": len(items),
+            "matching_items": len(matches),
+            "returned_items": len(page),
             "slice_start": slice_start,
-            "slice_end": slice_end if slice_end is not None else total,
-            "body": items,
+            "slice_end": next_offset,
+            "next_offset": next_offset if next_offset < len(matches) else None,
+            "body": page,
         }
+        if items and not page:
+            result["next_offset"] = None
+            result["requires_fields"] = True
+            result["message"] = "First item exceeds the page byte limit. Select fewer fields; no item was skipped."
+        return result
     if isinstance(body, dict):
         if fields:
             body = {k: v for k, v in body.items() if k in fields}
+        if len(json.dumps(body, ensure_ascii=False).encode("utf-8")) > READ_BYTE_LIMIT:
+            return {"path": abs_path, "body": None, "requires_fields": True,
+                    "message": "Select fields or collection_key for a bounded view; full data remains saved."}
         return {"path": abs_path, "body": body}
+    if isinstance(body, str):
+        end = min(slice_end if slice_end is not None else slice_start + 2000, slice_start + 4000)
+        return {"path": abs_path, "body": body[slice_start:end], "total_characters": len(body),
+                "next_offset": min(end, len(body)) if end < len(body) else None}
     return {"path": abs_path, "body": body}
 
 

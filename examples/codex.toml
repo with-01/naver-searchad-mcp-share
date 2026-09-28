@@ -1,6 +1,10 @@
 [mcp_servers.naver-searchad]
-command = 'C:\Users\YOUR_NAME\naver-searchad-mcp-share\.venv\Scripts\naver-searchad-mcp.exe'
-args = []
-env_vars = ["NAVER_SEARCHAD_CUSTOMER_ID", "NAVER_SEARCHAD_ACCESS_LICENSE", "NAVER_SEARCHAD_SECRET_KEY"]
+command = "uvx"
+args = ["--python", "3.12", "--from", "https://github.com/with-01/naver-searchad-mcp-share/releases/download/v0.3.0/naver_searchad_mcp-0.3.0-py3-none-any.whl", "naver-searchad-mcp"]
 startup_timeout_sec = 60
 tool_timeout_sec = 180
+
+[mcp_servers.naver-searchad.env]
+NAVER_SEARCHAD_CUSTOMER_ID = "YOUR_CUSTOMER_ID"
+NAVER_SEARCHAD_ACCESS_LICENSE = "YOUR_ACCESS_LICENSE"
+NAVER_SEARCHAD_SECRET_KEY = "YOUR_SECRET_KEY"

@@ -22,3 +22,10 @@ claude_desktop_config.json
 .mcp.json
 .codex/
 .vscode/
+# Personal copies populated with each user's API keys.
+*.local.json
+*.local.toml
+*.local.yaml
+*.local.yml
+*.local.ps1
+*.local.env

@@ -20,6 +20,8 @@
 | 항목 | 확인된 문제 | 배포본 조치 |
 | --- | --- | --- |
 | 통계 `fields` | 공식 예제의 JSON 배열 문자열을 문자열 전체의 enum 값으로 잘못 검사하여 정상 요청을 차단 | 단일·복수 개체 통계 모두 JSON 배열 문자열의 각 지표를 검사하고 원래 문자열을 전송 |
+| 키워드 수정 `fields` | 원문 enum 안에 붙은 작은따옴표를 전송 값으로 취급하여 정상 `bidAmt` 등을 거부 | 단건·일괄 키워드 수정의 `userLock`, `bidAmt`, `links`, `inspect` 네 값만 공식 설명과 호출 예제에 맞게 보정. 다른 enum은 변경하지 않음 |
+| 키워드 일괄 요청 크기 | 공식 설명의 최대 등록 100개·수정 200개 제한이 배열 스키마에는 빠져 있어 초과 요청을 허용 | 해당 두 작업의 유효 스키마에 `maxItems` 반영. 초과 입력은 HTTP 전송 전에 거부 |
 | 최신 명세 | 기존 9개 중 3개가 공식 현행 파일과 달랐음 | 공식 파일을 그대로 갱신. 총 126개에서 127개 작업으로 변경 |
 | 새 필드·값 | `aiAdsOptIn`, `purchaseRor`, 광고·광고그룹·확장소재의 일부 신규 enum 등이 누락 | 갱신된 정의와 검증에 반영. 마스터 보고서에서 제거된 `Account` 값도 현행 명세 반영 |
 | 신규 조회 | 긴 키워드 목록을 본문으로 보내는 ManagedKeyword POST가 누락 | 공식 명세의 새 작업 등록. 현재 쓰기 확인 정책은 HTTP 메서드 기준이므로 이 POST 조회도 확인 대상 |
@@ -28,6 +30,8 @@
 | 설치 후 명세 탐색 | 소스 저장소의 `docs` 경로에 의존 | 패키지에 포함된 `data/official-spec`를 우선 사용 |
 
 기존 126개 `operation_key` 모두 갱신 전과 동일한 HTTP 메서드·경로를 가리키는 것을 비교했습니다. 명세·입력 검증·스냅샷 무결성 관련 회귀 테스트를 통과했습니다. 그 밖의 패키징·보안 테스트 결과는 배포 검증 결과를 함께 확인해야 합니다.
+
+키워드 요청 보정의 근거는 [일괄 수정 설명의 200개 제한](https://github.com/naver/searchad-apidoc/blob/ed3174a5079b2df3230f6a19f0ac8f4dd5f448d8/assets/json/ncc-heroes-ncc.json#L2687), [등록 설명의 100개 제한](https://github.com/naver/searchad-apidoc/blob/ed3174a5079b2df3230f6a19f0ac8f4dd5f448d8/assets/json/ncc-heroes-ncc.json#L2903), [따옴표 없는 `bidAmt`를 보내는 공식 Python 예제](https://github.com/naver/searchad-apidoc/blob/0aa7a7650b71c6103a0a6df5100d559415815149/python-sample/examples/ad_management_sample.py#L130)입니다. 원문 JSON과 `raw` 스키마는 보정하지 않으며, 실제 검증에 쓰는 파라미터 및 `requestBody`에만 반영합니다.
 
 ## 인증·호출 규칙
 

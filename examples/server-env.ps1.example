@@ -1,0 +1,5 @@
+# Copy to server-env.local.ps1 and replace placeholders on your own computer.
+# Never commit or share the populated local copy.
+$env:NAVER_SEARCHAD_CUSTOMER_ID = 'YOUR_CUSTOMER_ID'
+$env:NAVER_SEARCHAD_ACCESS_LICENSE = 'YOUR_ACCESS_LICENSE'
+$env:NAVER_SEARCHAD_SECRET_KEY = 'YOUR_SECRET_KEY'
