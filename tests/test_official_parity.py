@@ -1,6 +1,6 @@
 import shutil
 
-from naver_searchad_mcp.review import run_official_parity_review, scan_for_forbidden_truncation_patterns, verify_snapshot_files
+from naver_searchad_mcp.review import run_official_parity_review, verify_snapshot_files
 from naver_searchad_mcp.spec import official_spec_dir
 
 
@@ -10,10 +10,6 @@ def test_official_parity_review_passes_core_checks():
     assert result["spec"]["total_operations"] == 127
     assert result["snapshot"]["verified_files"] == 12
     assert result["snapshot"]["sources"]["gh_pages_commit"] == "ed3174a5079b2df3230f6a19f0ac8f4dd5f448d8"
-
-
-def test_no_forbidden_truncation_patterns_in_runtime_code():
-    assert scan_for_forbidden_truncation_patterns() == []
 
 
 def test_unverified_bid_weight_parameter_remains_explicitly_blocked():

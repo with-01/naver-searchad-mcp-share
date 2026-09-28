@@ -132,3 +132,46 @@ def test_new_managed_keyword_post_is_registered():
     operation = get_registry().get_operation("ncc-heroes-ncc:postKeywordAttributesUsingPOST")
     assert operation.method == "POST"
     assert operation.path == "/api/ncc/managedKeyword"
+
+
+def test_input_schema_preserves_request_constraints_and_transitive_definitions():
+    registry = get_registry()
+    key = "ncc-heroes-ncc:addUsingPOST_6"
+    schema = registry.get_operation_schema(key, view="input")
+    full = registry.get_operation_schema(key)
+    assert "raw" not in schema
+    assert "responses" not in schema
+    assert schema["parameters"] == full["parameters"]
+    assert schema["requestBody"] == full["requestBody"]
+    assert schema["definitions"]["AdgroupRequest"] == full["definitions"]["AdgroupRequest"]
+    assert schema["definitions"]["AutobidStrategyRequest"] == full["definitions"]["AutobidStrategyRequest"]
+    assert len(schema["definitions"]) < len(full["definitions"])
+
+
+def test_input_schema_omits_response_only_definitions_and_keeps_manual_overrides():
+    registry = get_registry()
+    schema = registry.get_operation_schema("ncc-report:getReportJobByReportJobIdUsingGET", view="input")
+    assert "definitions" not in schema
+    parameter = next(p for p in schema["parameters"] if p["name"] == "reportJobId")
+    assert parameter["type"] == "integer"
+    assert parameter["format"] == "int64"
+    assert parameter["_manual_override_reason"]
+
+
+def test_every_input_schema_includes_all_referenced_definitions():
+    def references(value):
+        if isinstance(value, dict):
+            ref = value.get("$ref")
+            if isinstance(ref, str) and ref.startswith("#/definitions/"):
+                yield ref.removeprefix("#/definitions/")
+            for child in value.values():
+                yield from references(child)
+        elif isinstance(value, list):
+            for child in value:
+                yield from references(child)
+
+    registry = get_registry()
+    for key in registry.operations:
+        schema = registry.get_operation_schema(key, view="input")
+        missing = set(references(schema)) - set(schema.get("definitions", {}))
+        assert not missing, (key, missing)

@@ -29,6 +29,9 @@ async def test_stdio_initialize_discover_and_call():
                 assert tools["execute_read_operation"].annotations.readOnlyHint is True
                 assert tools["execute_operation"].annotations.destructiveHint is True
                 assert tools["execute_operation"].annotations.readOnlyHint is False
+                assert tools["execute_keyword_batch"].annotations.destructiveHint is True
+                assert tools["prepare_keyword_batch"].annotations.readOnlyHint is True
+                assert tools["get_keyword_batch_status"].annotations.readOnlyHint is True
                 assert all(tool.annotations is not None for tool in listing.tools)
                 guide = await session.call_tool("get_usage_guide", {"topic": "tools-cheatsheet"})
                 assert guide.isError is False
@@ -40,6 +43,12 @@ async def test_stdio_initialize_discover_and_call():
                 )
                 assert rejected.isError is True
                 assert "writes are disabled" in rejected.content[0].text
+                rejected_batch = await session.call_tool("execute_keyword_batch", {
+                    "plan_id": "unknown", "sha256": "unknown", "start_offset": 0,
+                    "confirm_action": "NAVER_SEARCHAD_WRITE",
+                })
+                assert rejected_batch.isError is True
+                assert "writes are disabled" in rejected_batch.content[0].text
 
 
 def test_streamable_http_initialize_metadata_and_origin_protection():
