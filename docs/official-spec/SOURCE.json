@@ -1,0 +1,62 @@
+{
+  "generated_at_utc": "2026-09-28T03:10:02.715614Z",
+  "official_sources": {
+    "github_repository": "https://github.com/naver/searchad-apidoc",
+    "github_pages": "https://naver.github.io/searchad-apidoc/",
+    "notice_page": "https://naver.github.io/searchad-apidoc/#/notice",
+    "master_commit": "0aa7a7650b71c6103a0a6df5100d559415815149",
+    "gh_pages_commit": "ed3174a5079b2df3230f6a19f0ac8f4dd5f448d8",
+    "spec_json_source_path": "assets/json/*.json on gh-pages branch",
+    "error_code_source_path": "NaverSA_API_Error_Code_MAP.md on master branch"
+  },
+  "files": {
+    "atower.json": {
+      "url": "https://raw.githubusercontent.com/naver/searchad-apidoc/ed3174a5079b2df3230f6a19f0ac8f4dd5f448d8/assets/json/atower.json",
+      "sha256": "60f985901976531c0aec226f83ec6844f506f5432a2c3ef5c41e2b52c3d9192a"
+    },
+    "estimate.json": {
+      "url": "https://raw.githubusercontent.com/naver/searchad-apidoc/ed3174a5079b2df3230f6a19f0ac8f4dd5f448d8/assets/json/estimate.json",
+      "sha256": "55d0fa4a8b40471f5ccb9e1a69a36557bf459d42215f63c2497650415e4f350b"
+    },
+    "master-report.json": {
+      "url": "https://raw.githubusercontent.com/naver/searchad-apidoc/ed3174a5079b2df3230f6a19f0ac8f4dd5f448d8/assets/json/master-report.json",
+      "sha256": "f2960603415c316e57274bfef0d198ede6990e91af03b2a9497cf56daba969a0"
+    },
+    "ncc-heroes-billing.json": {
+      "url": "https://raw.githubusercontent.com/naver/searchad-apidoc/ed3174a5079b2df3230f6a19f0ac8f4dd5f448d8/assets/json/ncc-heroes-billing.json",
+      "sha256": "04f824e76da145d7ae3c470312b9fd8cb116529896b96f7370d66d69d1c8e932"
+    },
+    "ncc-heroes-ncc.json": {
+      "url": "https://raw.githubusercontent.com/naver/searchad-apidoc/ed3174a5079b2df3230f6a19f0ac8f4dd5f448d8/assets/json/ncc-heroes-ncc.json",
+      "sha256": "717818d569ac3a8c52503c982eeed55aaa1c444fde25b0e5b746a15ce3b96333"
+    },
+    "ncc-heroes-tool.json": {
+      "url": "https://raw.githubusercontent.com/naver/searchad-apidoc/ed3174a5079b2df3230f6a19f0ac8f4dd5f448d8/assets/json/ncc-heroes-tool.json",
+      "sha256": "863e1f7bbc00d1222e351c31b930adf9d3207b4b5a5242df5ddd7078e2c26059"
+    },
+    "ncc-inspect-history.json": {
+      "url": "https://raw.githubusercontent.com/naver/searchad-apidoc/ed3174a5079b2df3230f6a19f0ac8f4dd5f448d8/assets/json/ncc-inspect-history.json",
+      "sha256": "6fb15cb7df9b876cd25ac68685dd70b9d2cd14d254083bdf01e2c29754cace53"
+    },
+    "ncc-keywordstool.json": {
+      "url": "https://raw.githubusercontent.com/naver/searchad-apidoc/ed3174a5079b2df3230f6a19f0ac8f4dd5f448d8/assets/json/ncc-keywordstool.json",
+      "sha256": "2b740259ce6939317684e66bf6fd767fb806a613f7b1d78fcc254be7a77689fa"
+    },
+    "ncc-report.json": {
+      "url": "https://raw.githubusercontent.com/naver/searchad-apidoc/ed3174a5079b2df3230f6a19f0ac8f4dd5f448d8/assets/json/ncc-report.json",
+      "sha256": "f30a3f43e4b11a442de17ef19861a007b0f5bc52151ea1ac2d18c1269731c1b5"
+    },
+    "github_README.md": {
+      "url": "https://raw.githubusercontent.com/naver/searchad-apidoc/0aa7a7650b71c6103a0a6df5100d559415815149/README.md",
+      "sha256": "268ef9ab857064224f4f67d7ac940d8296c4cc99615928b11d683fcc8131d051"
+    },
+    "NaverSA_API_Error_Code_MAP.md": {
+      "url": "https://raw.githubusercontent.com/naver/searchad-apidoc/0aa7a7650b71c6103a0a6df5100d559415815149/NaverSA_API_Error_Code_MAP.md",
+      "sha256": "cb904b094487595f5aad558c3c2b45ca7c1f91c951c2a4eb4b05c35a1446af16"
+    },
+    "official_signaturehelper.py": {
+      "url": "https://raw.githubusercontent.com/naver/searchad-apidoc/0aa7a7650b71c6103a0a6df5100d559415815149/python-sample/examples/signaturehelper.py",
+      "sha256": "f35806f60485dde53a4d67c26e77ecc2da714c2e1a0d88cd2eddb7bb51178802"
+    }
+  }
+}

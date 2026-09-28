@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "naver-searchad": {
+      "command": "C:\\Users\\YOUR_NAME\\naver-searchad-mcp-share\\.venv\\Scripts\\naver-searchad-mcp.exe",
+      "args": [],
+      "env": {
+        "NAVER_SEARCHAD_CUSTOMER_ID": "YOUR_CUSTOMER_ID",
+        "NAVER_SEARCHAD_ACCESS_LICENSE": "YOUR_ACCESS_LICENSE",
+        "NAVER_SEARCHAD_SECRET_KEY": "YOUR_SECRET_KEY"
+      }
+    }
+  }
+}

@@ -1,0 +1,3 @@
+* text=auto eol=lf
+# Preserve the exact upstream bytes used by SOURCE.json SHA-256 verification.
+docs/official-spec/* -text
